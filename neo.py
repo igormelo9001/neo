@@ -1,8 +1,9 @@
 import numpy as np
 from tensorflow.keras.models import Sequential
 from tensorflow.keras.layers import Embedding, LSTM, Dense
+import re
 
-# Texto de piadas de tiozão
+# Inteligência Artificial (IA) e Seus Conceitos Fundamentais
 text = """
 ## Inteligência Artificial (IA) e Seus Conceitos Fundamentais
 
@@ -62,9 +63,14 @@ Large Language Models (Modelos de Linguagem de Grande Escala) são um tipo de mo
 A inteligência artificial e suas subáreas, incluindo Machine Learning, Deep Learning e Redes Neurais, estão transformando diversos setores ao automatizar e aprimorar tarefas que antes exigiam intervenção humana. Modelos de Linguagem de Grande Escala, como os LLMs, representam um avanço significativo nessa trajetória, permitindo interações mais naturais e eficientes entre humanos e máquinas. A contínua evolução desses campos promete ainda mais inovações e melhorias em nosso dia a dia, aumentando a eficiência e a acessibilidade da tecnologia.
 """
 
+# Função para tokenizar o texto
+def tokenize(text):
+    text = re.sub(r'\W', ' ', text.lower())  # Remover caracteres não alfanuméricos e converter para minúsculas
+    tokens = text.split()
+    return tokens
 
-# Criar uma lista de palavras únicasas
-corpus = text.split()
+# Tokenizar o texto
+corpus = tokenize(text)
 
 # Criar pares de entrada e saída para o modelo
 input_sequences = []
@@ -99,21 +105,27 @@ model.compile(loss='sparse_categorical_crossentropy', optimizer='adam', metrics=
 model.fit(X, y, epochs=100)
 
 # Função para prever a próxima palavra
-def predict_next_word(input_word):
+def predict_next_word(input_word, temperature=1.0):
     input_index = word_to_index.get(input_word)
     if input_index is None:
         print(f"A palavra '{input_word}' não está no vocabulário.")
         return None
     input_sequence = np.array([input_index])
-    predicted_index = np.argmax(model.predict(input_sequence))
+    predictions = model.predict(input_sequence, verbose=0)[0]
+    predictions = np.asarray(predictions).astype('float64')
+    predictions = np.log(predictions + 1e-7) / temperature
+    exp_preds = np.exp(predictions)
+    predictions = exp_preds / np.sum(exp_preds)
+    probas = np.random.multinomial(1, predictions, 1)
+    predicted_index = np.argmax(probas)
     return index_to_word[predicted_index]
 
 # Função para gerar uma frase utilizando o modelo
-def generate_sentence_from_input(user_input, max_length=20):
-    sentence = user_input.split()
+def generate_sentence_from_input(user_input, max_length=20, temperature=1.0):
+    sentence = user_input.lower().split()
     current_word = sentence[-1]
     for _ in range(max_length):
-        next_word = predict_next_word(current_word)
+        next_word = predict_next_word(current_word, temperature=temperature)
         if next_word is None:
             break
         sentence.append(next_word)
