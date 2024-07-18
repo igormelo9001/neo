@@ -2,7 +2,7 @@ import numpy as np
 from tensorflow.keras.models import Sequential
 from tensorflow.keras.layers import Embedding, LSTM, Dense
 
-# Texto de piadas de tiozão
+# Texto de exemplo para treinar o modelo
 text = """
 ## Inteligência Artificial (IA) e Seus Conceitos Fundamentais
 
