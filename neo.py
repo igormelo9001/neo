@@ -2,65 +2,13 @@ import numpy as np
 from tensorflow.keras.models import Sequential
 from tensorflow.keras.layers import Embedding, LSTM, Dense
 import re
+from transformers import GPT2Tokenizer, GPT2LMHeadModel
+import gensim
 
-# Inteligência Artificial (IA) e Seus Conceitos Fundamentais
+# Texto de treinamento (corpus)
 text = """
 ## Inteligência Artificial (IA) e Seus Conceitos Fundamentais
-
-A Inteligência Artificial (IA) é um campo da ciência da computação que visa criar sistemas capazes de realizar tarefas que normalmente exigem inteligência humana. Essas tarefas incluem reconhecimento de fala, compreensão de linguagem natural, tomada de decisão e tradução de idiomas. Dentro da IA, existem subcampos específicos como Machine Learning (Aprendizado de Máquina), Deep Learning (Aprendizado Profundo) e Redes Neurais, cada um com suas particularidades e aplicações.
-
-### Inteligência Artificial (IA)
-A IA pode ser categorizada em duas principais vertentes: IA Geral (AGI, Artificial General Intelligence) e IA Específica (ANI, Artificial Narrow Intelligence). Enquanto a AGI se refere a sistemas que possuem uma inteligência semelhante à humana em todos os aspectos, a ANI se concentra em resolver problemas específicos.
-
-**Exemplos de Aplicações de IA:**
-- **Assistentes Virtuais:** Como Siri, Alexa e Google Assistant.
-- **Veículos Autônomos:** Carros que podem dirigir sozinhos.
-- **Sistemas de Recomendação:** Algoritmos que sugerem produtos ou conteúdo com base em preferências anteriores, como no Netflix e Amazon.
-
-### Machine Learning (ML)
-Machine Learning é um subcampo da IA que envolve o desenvolvimento de algoritmos que permitem aos computadores aprender a partir de dados. Em vez de serem explicitamente programados para realizar uma tarefa, os sistemas de ML são treinados em grandes conjuntos de dados e usam estatísticas para encontrar padrões e fazer previsões.
-
-#### Principais Tipos de Machine Learning:
-- **Aprendizado Supervisionado:** O modelo é treinado com dados rotulados. Por exemplo, um sistema que identifica emails de spam é treinado com emails previamente marcados como spam ou não spam.
-- **Aprendizado Não Supervisionado:** O modelo trabalha com dados não rotulados e tenta encontrar padrões ou agrupamentos. Por exemplo, segmentação de clientes em marketing.
-- **Aprendizado por Reforço:** O modelo aprende através de interações com um ambiente e recebe recompensas ou penalidades. Este tipo é comum em jogos e robótica.
-
-**Exemplo de Algoritmo de ML:**
-- **Regressão Linear:** Utilizado para prever valores contínuos, como o preço de uma casa com base em suas características.
-
-### Deep Learning (DL)
-Deep Learning é uma subárea do Machine Learning que utiliza Redes Neurais Artificiais com muitas camadas (daí o termo "deep" que significa "profundo") para modelar dados complexos. O DL tem sido responsável por grandes avanços em áreas como visão computacional, processamento de linguagem natural e reconhecimento de fala.
-
-#### Características do Deep Learning:
-- **Redes Neurais Convolucionais (CNNs):** Utilizadas principalmente para processamento de imagens e reconhecimento de padrões visuais.
-- **Redes Neurais Recorrentes (RNNs):** Utilizadas para dados sequenciais, como texto e séries temporais.
-- **Transformers:** Arquitetura avançada para processamento de linguagem natural, como GPT (Generative Pre-trained Transformer).
-
-**Exemplo de Aplicação de DL:**
-- **Reconhecimento de Imagens:** Classificação de objetos em imagens, como identificar cães e gatos.
-
-### Redes Neurais Artificiais
-Redes Neurais são a base do Deep Learning e são inspiradas no funcionamento do cérebro humano. Uma rede neural é composta por camadas de nós (neurônios artificiais), onde cada nó processa uma parte dos dados de entrada e passa o resultado para a próxima camada.
-
-#### Estrutura de uma Rede Neural:
-- **Camada de Entrada:** Onde os dados são introduzidos na rede.
-- **Camadas Ocultas:** Onde ocorre o processamento através de nós que aplicam funções matemáticas aos dados.
-- **Camada de Saída:** Onde o resultado final é produzido.
-
-### Large Language Models (LLMs)
-Large Language Models (Modelos de Linguagem de Grande Escala) são um tipo de modelo de Deep Learning treinado para entender e gerar linguagem natural. Estes modelos são treinados em vastos conjuntos de dados textuais e utilizam arquiteturas como Transformers para capturar o contexto e o significado das palavras.
-
-#### Exemplos de LLMs:
-- **GPT-3 e GPT-4:** Modelos desenvolvidos pela OpenAI capazes de gerar texto coerente, traduzir idiomas, responder perguntas e mais.
-- **BERT:** Modelo desenvolvido pelo Google que se destaca em tarefas de entendimento de linguagem natural.
-
-**Aplicações de LLMs:**
-- **Assistentes de Escrita:** Ajudam na criação de conteúdos textuais.
-- **Chatbots:** Fornecem respostas automatizadas a perguntas em interfaces de atendimento ao cliente.
-- **Tradução Automática:** Traduzem textos entre diferentes idiomas com alta precisão.
-
-### Conclusão
-A inteligência artificial e suas subáreas, incluindo Machine Learning, Deep Learning e Redes Neurais, estão transformando diversos setores ao automatizar e aprimorar tarefas que antes exigiam intervenção humana. Modelos de Linguagem de Grande Escala, como os LLMs, representam um avanço significativo nessa trajetória, permitindo interações mais naturais e eficientes entre humanos e máquinas. A contínua evolução desses campos promete ainda mais inovações e melhorias em nosso dia a dia, aumentando a eficiência e a acessibilidade da tecnologia.
+...
 """
 
 # Função para tokenizar o texto
@@ -69,47 +17,109 @@ def tokenize(text):
     tokens = text.split()
     return tokens
 
+# Função para preparar os dados para treinamento
+def prepare_data(corpus):
+    input_sequences = []
+    next_words = []
+    for i in range(len(corpus) - 1):
+        input_sequences.append(corpus[i])
+        next_words.append(corpus[i + 1])
+
+    word_to_index = {word: i for i, word in enumerate(set(corpus))}
+    index_to_word = {i: word for word, i in word_to_index.items()}
+
+    X = np.array([word_to_index[word] for word in input_sequences])
+    y = np.array([word_to_index[word] for word in next_words])
+    X = np.expand_dims(X, axis=-1)
+
+    return X, y, word_to_index, index_to_word
+
 # Tokenizar o texto
 corpus = tokenize(text)
 
-# Criar pares de entrada e saída para o modelo
-input_sequences = []
-next_words = []
-for i in range(len(corpus) - 1):
-    input_sequences.append(corpus[i])
-    next_words.append(corpus[i + 1])
+# Preparar os dados
+X, y, word_to_index, index_to_word = prepare_data(corpus)
 
-# Criar dicionários para mapear palavras para índices e vice-versa
-word_to_index = {word: i for i, word in enumerate(set(corpus))}
-index_to_word = {i: word for word, i in word_to_index.items()}
+# Estratégia 1: Modelo base com treinamento simples
+def train_simple_model(X, y, vocab_size, embedding_dim=50):
+    model = Sequential([
+        Embedding(vocab_size, embedding_dim),
+        LSTM(100),
+        Dense(vocab_size, activation='softmax')
+    ])
+    model.compile(loss='sparse_categorical_crossentropy', optimizer='adam', metrics=['accuracy'])
+    model.fit(X, y, epochs=10)
+    return model
 
-# Preparar os dados de entrada e saída para o modelo
-X = np.array([word_to_index[word] for word in input_sequences])
-y = np.array([word_to_index[word] for word in next_words])
+# Estratégia 2: Modelo com embeddings pré-treinados
+def load_pretrained_embeddings(word_to_index, embedding_dim=50):
+    word_vectors = gensim.models.KeyedVectors.load_word2vec_format('path/to/word2vec.bin', binary=True)
+    embedding_matrix = np.zeros((len(word_to_index), embedding_dim))
+    for word, index in word_to_index.items():
+        if word in word_vectors:
+            embedding_matrix[index] = word_vectors[word]
+    return embedding_matrix
 
-# Redimensionar os dados de entrada para serem tridimensionais
-X = np.expand_dims(X, axis=-1)
+def train_pretrained_embedding_model(X, y, vocab_size, embedding_matrix):
+    embedding_dim = embedding_matrix.shape[1]
+    model = Sequential([
+        Embedding(vocab_size, embedding_dim, weights=[embedding_matrix], trainable=False),
+        LSTM(100),
+        Dense(vocab_size, activation='softmax')
+    ])
+    model.compile(loss='sparse_categorical_crossentropy', optimizer='adam', metrics=['accuracy'])
+    model.fit(X, y, epochs=10)
+    return model
 
-# Construir o modelo
-vocab_size = len(word_to_index)
-embedding_dim = 50
-model = Sequential([
-    Embedding(vocab_size, embedding_dim),
-    LSTM(100),
-    Dense(vocab_size, activation='softmax')
-])
+# Estratégia 3: Uso de GPT-2 sem ajuste fino
+def generate_text_gpt2(prompt, max_length=50):
+    tokenizer = GPT2Tokenizer.from_pretrained('gpt2')
+    model = GPT2LMHeadModel.from_pretrained('gpt2')
+    inputs = tokenizer.encode(prompt, return_tensors='pt')
+    outputs = model.generate(inputs, max_length=max_length, num_return_sequences=1)
+    return tokenizer.decode(outputs[0], skip_special_tokens=True)
 
-model.compile(loss='sparse_categorical_crossentropy', optimizer='adam', metrics=['accuracy'])
+# Estratégia 4: Ajuste fino com GPT-2 (esboço simplificado)
+# Para um ajuste fino real, você precisa de mais recursos computacionais e um dataset apropriado
+def train_gpt2(dataset_path, model_name='gpt2', output_dir='./gpt2-finetuned'):
+    from transformers import TextDataset, DataCollatorForLanguageModeling, Trainer, TrainingArguments
 
-# Treinar o modelo
-model.fit(X, y, epochs=100)
+    tokenizer = GPT2Tokenizer.from_pretrained(model_name)
+    model = GPT2LMHeadModel.from_pretrained(model_name)
+    dataset = TextDataset(
+        tokenizer=tokenizer,
+        file_path=dataset_path,
+        block_size=128
+    )
+    data_collator = DataCollatorForLanguageModeling(
+        tokenizer=tokenizer,
+        mlm=False,
+    )
+    training_args = TrainingArguments(
+        output_dir=output_dir,
+        overwrite_output_dir=True,
+        num_train_epochs=3,
+        per_device_train_batch_size=4,
+        save_steps=10_000,
+        save_total_limit=2,
+    )
+    trainer = Trainer(
+        model=model,
+        args=training_args,
+        data_collator=data_collator,
+        train_dataset=dataset,
+    )
+    trainer.train()
+    trainer.save_model(output_dir)
 
-# Função para prever a próxima palavra
-def predict_next_word(input_word, temperature=1.0):
-    input_index = word_to_index.get(input_word)
-    if input_index is None:
-        print(f"A palavra '{input_word}' não está no vocabulário.")
-        return None
+# Estratégia 5: Geração controlada com temperatura
+def predict_next_word(model, input_word, word_to_index, index_to_word, temperature=1.0):
+    if input_word not in word_to_index:
+        print(f"A palavra '{input_word}' não está no vocabulário. Usando a palavra mais próxima.")
+        input_word = find_closest_word(input_word)
+        print(f"Palavra mais próxima encontrada: '{input_word}'")
+        
+    input_index = word_to_index[input_word]
     input_sequence = np.array([input_index])
     predictions = model.predict(input_sequence, verbose=0)[0]
     predictions = np.asarray(predictions).astype('float64')
@@ -120,12 +130,11 @@ def predict_next_word(input_word, temperature=1.0):
     predicted_index = np.argmax(probas)
     return index_to_word[predicted_index]
 
-# Função para gerar uma frase utilizando o modelo
-def generate_sentence_from_input(user_input, max_length=20, temperature=1.0):
+def generate_sentence_from_input(model, user_input, word_to_index, index_to_word, max_length=20, temperature=1.0):
     sentence = user_input.lower().split()
     current_word = sentence[-1]
     for _ in range(max_length):
-        next_word = predict_next_word(current_word, temperature=temperature)
+        next_word = predict_next_word(model, current_word, word_to_index, index_to_word, temperature=temperature)
         if next_word is None:
             break
         sentence.append(next_word)
@@ -134,12 +143,51 @@ def generate_sentence_from_input(user_input, max_length=20, temperature=1.0):
         current_word = next_word
     return ' '.join(sentence)
 
-# Ponto de entrada
+# Estratégia 6: Geração com beam search
+def generate_text_beam_search(model, tokenizer, prompt, beam_width=3, max_length=50):
+    inputs = tokenizer.encode(prompt, return_tensors='pt')
+    outputs = model.generate(inputs, max_length=max_length, num_beams=beam_width, early_stopping=True)
+    return tokenizer.decode(outputs[0], skip_special_tokens=True)
+
+# Ponto de entrada principal
 if __name__ == "__main__":
-    while True:
-        user_input = input("Digite uma palavra ou frase: ")
-        if user_input.lower() == 'sair':
-            print("Saindo...")
-            break
-        generated_sentence = generate_sentence_from_input(user_input)
-        print("Frase gerada:", generated_sentence)
+    vocab_size = len(word_to_index)
+    
+    # Treinar modelos
+    simple_model = train_simple_model(X, y, vocab_size)
+    
+    # Carregar embeddings pré-treinados
+    # Certifique-se de fornecer o caminho correto para o arquivo de embeddings pré-treinados
+    embedding_matrix = load_pretrained_embeddings(word_to_index)
+    pretrained_embedding_model = train_pretrained_embedding_model(X, y, vocab_size, embedding_matrix)
+    
+    # GPT-2
+    gpt2_tokenizer = GPT2Tokenizer.from_pretrained('gpt2')
+    gpt2_model = GPT2LMHeadModel.from_pretrained('gpt2')
+    
+    # Geração de frases
+    user_input = "Digite uma palavra ou frase: "
+    
+    print("Estratégia 1: Modelo base")
+    for _ in range(5):
+        print(generate_sentence_from_input(simple_model, user_input, word_to_index, index_to_word))
+    
+    print("Estratégia 2: Modelo com embeddings pré-treinados")
+    for _ in range(5):
+        print(generate_sentence_from_input(pretrained_embedding_model, user_input, word_to_index, index_to_word))
+    
+    print("Estratégia 3: Uso de GPT-2 sem ajuste fino")
+    for _ in range(5):
+        print(generate_text_gpt2(user_input))
+    
+    # Ajuste fino com GPT-2: Esta parte requer um dataset e recursos computacionais adequados
+    # train_gpt2('path/to/your/training_corpus.txt')
+    # gpt2_finetuned_model = GPT2LMHeadModel.from_pretrained('./gpt2-finetuned')
+    
+    print("Estratégia 5: Geração controlada com temperatura")
+    for _ in range(5):
+        print(generate_sentence_from_input(pretrained_embedding_model, user_input, word_to_index, index_to_word, temperature=0.7))
+    
+    print("Estratégia 6: Geração com beam search")
+    for _ in range(5):
+        print(generate_text_beam_search(gpt2_model, gpt2_tokenizer, user_input))
